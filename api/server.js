@@ -1,6 +1,11 @@
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
+const session = require('express-session');
+const Store = require('connect-session-knex')(session);
+const authRouter=require('./auth/auth-router')
+const userRouter=require('./users/users-router')
+const server = express();
 
 /**
   Kullanıcı oturumlarını desteklemek için `express-session` paketini kullanın!
@@ -15,11 +20,31 @@ const cors = require("cors");
   veya "connect-session-knex" gibi bir oturum deposu kullanabilirsiniz.
  */
 
-const server = express();
+server.use(session({
+    name:"cikolatacips",
+    secret:"secret_cikolatacips",
+    cookie: {
+        maxAge: 1000*60*60,  //ms cinsinden geçerlilik süresi = 1 saat
+        secure: false, 
+        httpOnly: false
+    },
+    store: new Store({
+      knex: require('../data/db-config'),
+      tablename: 'sessions',
+      sidfieldname:'sid',
+      createtable: true,
+      clearInterval: 1000*60*60
+    }),
+    resave: false,
+    saveUninitialized: false
+}))
 
 server.use(helmet());
 server.use(express.json());
 server.use(cors());
+
+server.use('/api/auth', authRouter);
+server.use('/api/users', userRouter);
 
 server.get("/", (req, res) => {
   res.json({ api: "up" });
